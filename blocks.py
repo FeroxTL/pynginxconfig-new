@@ -3,6 +3,9 @@ import copy
 from collections import OrderedDict
 
 
+__all__ = ['Base', 'Comment', 'KeyOption', 'KeyValueOption', 'Block', 'EmptyBlock']
+
+
 class Base(object):
     def get_indent(self, indent_level=0, indent_char=' ', indent=4, *args, **kwargs):
         return indent_char * indent * indent_level
@@ -11,6 +14,22 @@ class Base(object):
         return '\n%(indent)s%(name)s' % {
             'name': name,
             'indent': self.get_indent(*args, **kwargs),
+        }
+
+
+class Comment(Base):
+    _offset = ''
+    _comment = ''
+
+    def __init__(self, offset='', comment='', *args, **kwargs):
+        self._offset = offset
+        self._comment = comment
+        super(Comment, self).__init__(*args, **kwargs)
+
+    def render(self, name, *args, **kwargs):
+        return '%(offset)s#%(comment)s' % {
+            'offset': self._offset,
+            'comment': self._comment,
         }
 
 
@@ -23,10 +42,6 @@ class KeyValueOption(Base):
     def __str__(self):
         return str(self._value)
 
-    #def __set__(self, obj, value):
-    #    self._value = value
-    #    super(KeyValueOption, self).__set__(obj, value)
-
     def __init__(self, value='', *args, **kwargs):
         self._value = value
         super(KeyValueOption, self).__init__(*args, **kwargs)
@@ -36,7 +51,7 @@ class KeyValueOption(Base):
 
     def render(self, name, *args, **kwargs):
         return super(KeyValueOption, self).render(
-            u'%(name)s = %(value)s;' % {
+            '%(name)s %(value)s;' % {
                 'name': name,
                 'value': self._value
             }, *args, **kwargs)
@@ -45,7 +60,7 @@ class KeyValueOption(Base):
 class BlockMeta(type):
     def __new__(cls, name, bases, attrs):
         new_attrs = {'__options': {}}
-        for attrname, attr in attrs.iteritems():
+        for attrname, attr in attrs.items():
             if issubclass(type(attr), Base):
                 new_attrs['__options'].update({attrname: attr})
             else:
@@ -54,13 +69,19 @@ class BlockMeta(type):
 
 
 class Block(Base):
-    _options = []
     __metaclass__ = BlockMeta
+
+    def add_comment(self, comment):
+        self._comments_count += 1
+        name = 'comment{0}'.format(self._comments_count)
+        setattr(self, name, comment)
 
     def __new__(cls):
         obj = super(Base, cls).__new__(cls)
+        super(Block, obj).__setattr__('_options', [])
+        super(Block, obj).__setattr__('_comments_count', 0)
         if hasattr(cls, '__options'):
-            for attrname, attr in getattr(cls, '__options').iteritems():
+            for attrname, attr in getattr(cls, '__options').items():
                 setattr(obj, attrname, copy.deepcopy(attr))
         return obj
 
@@ -71,17 +92,32 @@ class Block(Base):
                 self._options.append(attr)
         elif attr in self._options:
             getattr(self, attr).val(value)
+        elif type(value) in [int, str]:
+            super(Block, self).__setattr__(attr, value)
+
+    def __setitem__(self, attr, value):
+        return self.__setattr__(attr, value)
+
+    def __getitem__(self, attr):
+        return getattr(self, attr)
 
     def __delattr__(self, attr):
         del self._options[self._options.index(attr)]
         super(Block, self).__delattr__(attr)
 
     def render(self, name='', indent_level=0, indent=4, indent_char=' '):
-        options = u''.join([
+        options = ''.join([
             getattr(self, key_name).render(key_name, indent_level + 1, indent_char, indent)
                 for key_name in self._options])
-        return u'%(indent)s%(name)s{%(options)s\n%(indent)s}' % {
+        return '\n%(indent)s%(name)s{\n%(options)s\n%(indent)s}' % {
             'name': '%s ' % name if name else '',
             'options': options,
             'indent': self.get_indent(indent_level, indent_char, indent),
         }
+
+
+class EmptyBlock(Block):
+    def render(self, indent_level=0, indent=4, indent_char=' '):
+        return ''.join([
+            getattr(self, key_name).render(key_name, indent_level, indent_char, indent)
+                for key_name in self._options])

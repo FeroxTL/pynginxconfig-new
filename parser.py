@@ -19,14 +19,16 @@ def parse(s, parent_block):
             continue
 
         if config[pos] == ';' and brackets_level == 0:
-            option = re.search('\s*(?P<param_name>\w+)\s*(?P<param_options>.*?);', config[param_start:], re.S)
-            if not option:
+            re_option = re.search('\s*(?P<param_name>\w+)\s*(?P<param_options>.*?);', config[param_start:], re.S)
+            if not re_option:
                 raise Exception('Wrong option')
 
-            option = option.groupdict()
+            option = re_option.groupdict()
             parent_block[option['param_name']] = KeyValueOption(re.sub('[ \n]+', ' ', option['param_options']))
 
-            param_start = pos + 1
+            config = config[re_option.end():]
+            pos, param_start = 0, 0
+            continue
 
         if config[pos] == '{':
             brackets_level += 1
@@ -37,12 +39,16 @@ def parse(s, parent_block):
                 re_block = re.search(
                     '(?P<param_name>\w+)\s*(?P<param_options>.*)\s*{(\n){0,1}(?P<block>(.|\n)*)}',
                     config[param_start:pos + 1],
-                ).groupdict()
-                block = re_block['block']
-                parent_block[re_block['param_name']] = Block()
-                if block:
-                    parse(block, parent_block[re_block['param_name']])
-                param_start = pos + 1
+                )
+                block = re_block.groupdict()
+
+                parent_block[block['param_name']] = Block()
+                if block['block']:
+                    parse(block['block'], parent_block[block['param_name']])
+
+                config = config[re_block.end():]
+                pos, param_start = 0, 0
+                continue
 
         pos += 1
 
@@ -50,7 +56,7 @@ def parse(s, parent_block):
         raise Exception('Not closed bracket')
 
 
-'''
+
 qwe = EmptyBlock()
 
 parse("""#{ asd #qweqeqwe{}
@@ -69,7 +75,9 @@ server {
     #location /qwe{
     #}#123
 }#qweqwe""", qwe)
-'''
+
+print(qwe.render())
+
 
 qwe = EmptyBlock()
 parse(""" servername wqeqweqwe;
@@ -104,7 +112,7 @@ http {
 
     gzip on;
     gzip_disable "msie6";
-}
+}#123123
 """, qwe)
 
 print(qwe.render())

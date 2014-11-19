@@ -2,7 +2,7 @@
 import copy
 import re
 
-from blocks import Block, EmptyBlock, KeyValueOption, Comment
+from blocks import Block, EmptyBlock, KeyValueOption, Comment, Location
 
 
 def parse(s, parent_block):
@@ -42,9 +42,15 @@ def parse(s, parent_block):
                 )
                 block = re_block.groupdict()
 
-                parent_block[block['param_name']] = Block()
+                if block['param_name'].lower() == 'location':
+                    new_block = Location(block['param_options'])
+                    parent_block.add_location(new_block)
+                else:
+                    new_block = Block()
+                    parent_block[block['param_name']] = new_block
+
                 if block['block']:
-                    parse(block['block'], parent_block[block['param_name']])
+                    parse(block['block'], new_block)
 
                 config = config[re_block.end():]
                 pos, param_start = 0, 0
@@ -72,8 +78,9 @@ server {
         l200;
     }
 
-    #location /qwe{
-    #}#123
+    location /qwe{
+        s 500;
+    }#123
 }#qweqwe""", qwe)
 
 print(qwe.render())

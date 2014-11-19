@@ -81,7 +81,7 @@ class Test(unittest.TestCase):
         """
         kvb = Block()
         kvb.kv = KeyValueOption('value')
-        self.assertEqual(kvb.render('kbv_name'), '\nkbv_name {\n\n    kv value;\n}')
+        self.assertEqual(kvb.render('kbv_name'), '\nkbv_name {\n    kv value;\n}')
 
     def test_kv_block_initial(self):
         """
@@ -90,23 +90,23 @@ class Test(unittest.TestCase):
         kvb = NgKVB()
         self.assertEqual(str(kvb.kv), 'kv_value')
         self.assertEqual(kvb.kv.render('kv'), '\nkv kv_value;')
-        self.assertEqual(kvb.render('kvb_name'), '\nkvb_name {\n\n    kv kv_value;\n}')
+        self.assertEqual(kvb.render('kvb_name'), '\nkvb_name {\n    kv kv_value;\n}')
 
         kvb.kv = 'kv_another_value'
         self.assertEqual(type(kvb.kv), KeyValueOption)
         self.assertEqual(str(kvb.kv), 'kv_another_value')
         self.assertEqual(kvb.kv.render('kv'), '\nkv kv_another_value;')
-        self.assertEqual(kvb.render('kvb_name'), '\nkvb_name {\n\n    kv kv_another_value;\n}')
+        self.assertEqual(kvb.render('kvb_name'), '\nkvb_name {\n    kv kv_another_value;\n}')
 
         del kvb.kv
         self.assertEqual(hasattr(kvb, 'kv'), False)
         self.assertEqual('kv' in kvb._options, False)
-        self.assertEqual(kvb.render('kvb_name'), '\nkvb_name {\n\n}')
+        self.assertEqual(kvb.render('kvb_name'), '\nkvb_name {\n}')
 
         kvb2 = NgKVB()
         self.assertEqual(str(kvb2.kv), 'kv_value')
         self.assertEqual(kvb2.kv.render('kv'), '\nkv kv_value;')
-        self.assertEqual(kvb2.render('kvb_name'), '\nkvb_name {\n\n    kv kv_value;\n}')
+        self.assertEqual(kvb2.render('kvb_name'), '\nkvb_name {\n    kv kv_value;\n}')
 
 
 if __name__ == "__main__":

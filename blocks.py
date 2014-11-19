@@ -76,10 +76,21 @@ class Block(Base):
         name = 'comment{0}'.format(self._comments_count)
         setattr(self, name, comment)
 
-    def __new__(cls):
-        obj = super(Base, cls).__new__(cls)
+    def add_location(self, location):
+        self._locations_count += 1
+        name = 'location{0}'.format(self._locations_count)
+        setattr(self, name, location)
+
+    def __new__(cls, *args, **kwargs):
+        obj = super(Base, cls).__new__(cls, *args, **kwargs)
+
+        # Options
         super(Block, obj).__setattr__('_options', [])
         super(Block, obj).__setattr__('_comments_count', 0)
+        # Locations
+        super(Block, obj).__setattr__('_locations', [])
+        super(Block, obj).__setattr__('_locations_count', 0)
+
         if hasattr(cls, '__options'):
             for attrname, attr in getattr(cls, '__options').items():
                 setattr(obj, attrname, copy.deepcopy(attr))
@@ -107,9 +118,14 @@ class Block(Base):
 
     def render(self, name='', indent_level=0, indent=4, indent_char=' '):
         options = ''.join([
-            getattr(self, key_name).render(key_name, indent_level + 1, indent_char, indent)
+            getattr(self, key_name).render(
+                    name=key_name,
+                    indent_level=indent_level + 1,
+                    indent_char=indent_char,
+                    indent=indent,
+                )
                 for key_name in self._options])
-        return '\n%(indent)s%(name)s{\n%(options)s\n%(indent)s}' % {
+        return '\n%(indent)s%(name)s{%(options)s\n%(indent)s}' % {
             'name': '%s ' % name if name else '',
             'options': options,
             'indent': self.get_indent(indent_level, indent_char, indent),
@@ -121,3 +137,21 @@ class EmptyBlock(Block):
         return ''.join([
             getattr(self, key_name).render(key_name, indent_level, indent_char, indent)
                 for key_name in self._options])
+
+
+class Location(Block):
+    _location = ''
+
+    def __init__(self, location):
+        self._location = location
+        super(Location, self).__init__()
+
+    def render(self, indent_level=0, indent=4, indent_char=' ', *args, **kwargs):
+        options = ''.join([
+            getattr(self, key_name).render(key_name, indent_level + 1, indent_char, indent)
+                for key_name in self._options])
+        return '\n%(indent)slocation %(name)s{%(options)s\n%(indent)s}' % {
+            'name': '%s ' % self._location,
+            'options': options,
+            'indent': self.get_indent(indent_level, indent_char, indent),
+        }
